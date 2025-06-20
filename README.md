@@ -1,36 +1,113 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI Mood Journal
 
-## Getting Started
+A modern web application that allows users to save journal entries with AI-powered sentiment analysis and keyword extraction, providing valuable insights into their mood trends.
 
-First, run the development server:
+## 🚀 Core Features
+
+- **Smart Journal Entries**: Write and save personal journal entries.
+- **AI-Powered Analysis**: Automatic sentiment analysis and Named Entity Recognition (keyword extraction).
+- **Insightful Dashboard**: Visualize mood distribution and see trending keywords at a glance.
+- **Full CRUD Operations**: Create, read, update, and delete entries seamlessly.
+
+## 🛠️ Tech Stack
+
+- **Framework**: Next.js (App Router)
+- **Language**: TypeScript
+- **Database**: Neon (Serverless PostgreSQL)
+- **AI/ML**: Hugging Face Inference API
+- **Deployment**: Vercel
+
+## 🔧 Getting Started
+
+Follow these steps to get the project running locally.
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/aarabii/Ai-mood-journal-api.git
+cd Ai-mood-journal-api
+```
+
+### 2. Install Dependencies
+
+```bash
+npm install
+```
+
+### 3. Set Up Environment Variables
+
+Create a file named `.env.local` in the root of your project and add the following variables.
+
+```env
+# .env.local
+
+# Get this from your Neon project dashboard or vercel storage dashboard
+DATABASE_URL="neon_database_connection_string"
+
+# Get this from your Hugging Face account settings with read access
+HF_TOKEN="your_hugging_face_token"
+```
+
+### 4. Run the Application
+
+Start the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 5. Set Up the Database
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+With the application running, open your browser and go to the following URL to automatically create the necessary database table:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**http://localhost:3000/api/setup**
 
-## Learn More
+You only need to do this once. Your application is now ready to use at `http://localhost:3000`.
 
-To learn more about Next.js, take a look at the following resources:
+## 📚 API Endpoints
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The application uses the following API endpoints to function:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Method   | Endpoint                 | Description                                                       |
+| -------- | ------------------------ | ----------------------------------------------------------------- |
+| `GET`    | `/api/entries`           | Retrieves a list of all journal entries.                          |
+| `POST`   | `/api/entries`           | Creates a new journal entry after AI analysis.                    |
+| `PUT`    | `/api/entries/[id]`      | Updates a specific journal entry.                                 |
+| `DELETE` | `/api/entries/[id]`      | Deletes a specific journal entry.                                 |
+| `GET`    | `/api/stats`             | Gets aggregated data like total entries and mood breakdown.       |
+| `GET`    | `/api/keywords/trending` | Gets a list of the most frequently used keywords.                 |
+| `GET`    | `/api/setup`             | **(Dev only)** A one-time route to initialize the database table. |
 
-## Deploy on Vercel
+## 🚀 Deployment
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+This project is optimized for deployment on **Vercel**.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Push your code to a Git provider (GitHub, GitLab, etc.).
+2. Import your repository into Vercel.
+3. Add your `DATABASE_URL` and `HF_TOKEN` as Environment Variables in the Vercel project settings.
+4. Deploy!
+
+## 📁 Project Structure
+
+The project uses the Next.js App Router. Key directories include:
+
+```
+src/
+├── app/
+│   ├── api/                         # API route handlers
+│   │   ├── entries/                 # CRUD operations for journal entries
+│   │   │   ├── [id]/route.ts       # PUT & DELETE: Update/Delete a specific journal entry
+│   │   │   └── route.ts            # GET & POST: Get all or create a journal entry
+│   │   ├── keywords/
+│   │   │   └── trending/route.ts   # GET: Trending keywords
+│   │   ├── setup/route.ts          # GET: Initialize DB (for dev setup)
+│   │   └── stats/route.ts          # GET: Aggregated stats
+│   ├── (main)/                     # Main route group for pages
+│   │   └── page.tsx                # Home or main UI page
+│   ├── font.ts                     # Centralized font imports
+│   ├── globals.css                 # Global CSS styles
+│   └── layout.tsx                  # Root layout for all routes
+├── components/                     # Reusable components
+├── constant/                       # Static definitions and constants
+├── lib/                            # Utility libraries and integrations
+```

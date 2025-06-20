@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "Ai Mood Journal",
   description:
     "A journal powered by AI to help you track your mood and emotions.",
+  icons: "/icon.svg",
 };
 
 export default function RootLayout({
