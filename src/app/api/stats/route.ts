@@ -1,46 +1,31 @@
-import { NextResponse as NextResponseStats } from "next/server";
-import { db } from "@vercel/postgres";
+import { sql } from "@/lib/db";
+import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
-    const sentimentQuery = `
-      SELECT
-        sentiment,
-        COUNT(id) as count
-      FROM entries
-      WHERE sentiment IS NOT NULL
-      GROUP BY sentiment;
-    `;
+    const totalEntriesPromise = sql("SELECT COUNT(*) FROM journal_entries");
+    const sentimentBreakdownPromise = sql(
+      `SELECT sentiment, COUNT(*) as count
+             FROM journal_entries
+             WHERE sentiment IS NOT NULL
+             GROUP BY sentiment`
+    );
 
-    const totalQuery = `SELECT COUNT(*) as total FROM entries;`;
-    const avgScoreQuery = `SELECT AVG(sentiment_score) as average_score FROM entries WHERE sentiment_score IS NOT NULL;`;
-
-    const [sentimentResult, totalResult, avgScoreResult] = await Promise.all([
-      db.query(sentimentQuery),
-      db.query(totalQuery),
-      db.query(avgScoreQuery),
+    const [totalEntriesRes, sentimentBreakdownRes] = await Promise.all([
+      totalEntriesPromise,
+      sentimentBreakdownPromise,
     ]);
 
-    const totalEntries = parseInt(totalResult.rows[0].total, 10);
-    const sentimentBreakdown = sentimentResult.rows.map((row) => ({
-      ...row,
-      percentage:
-        totalEntries > 0 ? (parseInt(row.count, 10) / totalEntries) * 100 : 0,
-    }));
-
     const stats = {
-      totalEntries,
-      sentimentBreakdown,
-      averageSentimentScore: parseFloat(
-        avgScoreResult.rows[0].average_score || 0
-      ),
+      totalEntries: parseInt(totalEntriesRes.rows[0].count, 10),
+      sentimentBreakdown: sentimentBreakdownRes.rows,
     };
 
-    return NextResponseStats.json(stats);
+    return NextResponse.json(stats);
   } catch (error) {
-    console.error("Error fetching comprehensive stats:", error);
-    return NextResponseStats.json(
-      { error: "Failed to fetch statistics" },
+    console.error("Failed to fetch stats:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch statistics." },
       { status: 500 }
     );
   }

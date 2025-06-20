@@ -1,98 +1,54 @@
-import { NextResponse } from "next/server";
-import { sql } from "@vercel/postgres";
-import { analyzeContent } from "@/lib/huggingface";
+import { sql } from "@/lib/db";
+import { analyzeSentiment, extractKeywords } from "@/lib/huggingface";
+import { NextRequest, NextResponse } from "next/server";
 
-// Ensure the database table exists
-async function setupDatabase() {
+export async function GET() {
   try {
-    await sql`
-      CREATE TABLE IF NOT EXISTS entries (
-        id SERIAL PRIMARY KEY,
-        content TEXT NOT NULL,
-        sentiment VARCHAR(20),
-        sentiment_score REAL,
-        keywords TEXT[],
-        "createdAt" TIMESTAMPTZ DEFAULT NOW()
-      );
-    `;
-    console.log("Database table 'entries' is ready.");
-  } catch (error) {
-    console.error("Error setting up database table:", error);
-    throw error;
-  }
-}
-
-// Run setup once on file load
-setupDatabase();
-
-export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const search = searchParams.get("search") || "";
-    const limit = Math.min(parseInt(searchParams.get("limit") || "20", 10), 50);
-    const offset = Math.max(parseInt(searchParams.get("offset") || "0", 10), 0);
-
-    const { rows } = search
-      ? await sql`
-          SELECT *, "createdAt" as "createdAt"
-          FROM entries
-          WHERE content ILIKE ${"%" + search + "%"}
-          ORDER BY "createdAt" DESC
-          LIMIT ${limit} OFFSET ${offset}
-        `
-      : await sql`
-          SELECT *, "createdAt" as "createdAt"
-          FROM entries
-          ORDER BY "createdAt" DESC
-          LIMIT ${limit} OFFSET ${offset}
-        `;
-
+    const { rows } = await sql(
+      "SELECT id, content, sentiment, keywords, created_at FROM journal_entries ORDER BY created_at DESC"
+    );
     return NextResponse.json(rows);
   } catch (error) {
-    console.error("Error fetching entries:", error);
+    console.error("Failed to fetch entries:", error);
     return NextResponse.json(
-      { error: "Failed to fetch entries" },
+      { error: "Failed to fetch journal entries." },
       { status: 500 }
     );
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const { content } = await request.json();
 
-    if (!content || typeof content !== "string" || content.trim().length < 3) {
+    if (
+      !content ||
+      typeof content !== "string" ||
+      content.trim().length === 0
+    ) {
       return NextResponse.json(
-        { error: "Content must be a string with at least 3 characters." },
+        { error: "Content is required." },
         { status: 400 }
       );
     }
 
-    const trimmedContent = content.trim();
-    const analysis = await analyzeContent(trimmedContent);
+    const [sentiment, keywords] = await Promise.all([
+      analyzeSentiment(content),
+      extractKeywords(content),
+    ]);
 
-    const keywords = Array.isArray(analysis.keywords)
-      ? analysis.keywords.map((kw) => String(kw))
-      : [];
-
-    const { rows } = await sql`
-      INSERT INTO entries (content, sentiment, sentiment_score, keywords)
-      VALUES (
-        ${trimmedContent},
-        ${analysis.sentiment},
-        ${analysis.sentimentScore},
-        $${`{${keywords.map((kw) => `"${kw}"`).join(",")}}`}
-      )
-      RETURNING *, "createdAt" as "createdAt";
-    `;
+    const { rows } = await sql(
+      `INSERT INTO journal_entries (content, sentiment, keywords)
+             VALUES ($1, $2, $3)
+             RETURNING id, content, sentiment, keywords, created_at`,
+      [content, sentiment, keywords]
+    );
 
     return NextResponse.json(rows[0], { status: 201 });
   } catch (error) {
     console.error("Failed to create entry:", error);
-    const errorMessage =
-      error instanceof Error ? error.message : "An unknown error occurred";
     return NextResponse.json(
-      { error: "Failed to create new entry", details: errorMessage },
+      { error: "Failed to create journal entry." },
       { status: 500 }
     );
   }
