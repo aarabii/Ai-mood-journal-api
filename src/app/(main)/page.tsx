@@ -10,7 +10,7 @@ import { JournalHistory } from "@/components/JournalHistory";
 import { sentimentColors } from "@/constant/sentiments";
 
 import { JournalEntry, Stats, TrendingKeyword } from "@/constant/types";
-import { geistSans } from "./font";
+import { geistSans } from "../font";
 
 export default function AIMoodJournal() {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
