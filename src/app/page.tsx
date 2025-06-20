@@ -10,6 +10,7 @@ import { JournalHistory } from "@/components/JournalHistory";
 import { sentimentColors } from "@/constant/sentiments";
 
 import { JournalEntry, Stats, TrendingKeyword } from "@/constant/types";
+import { geistSans } from "./font";
 
 export default function AIMoodJournal() {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
@@ -125,7 +126,9 @@ export default function AIMoodJournal() {
   const latestEntry = entries[0];
 
   return (
-    <div className="min-h-screen bg-background text-foreground font-['Inter']">
+    <div
+      className={`min-h-screen bg-background text-foreground ${geistSans.variable} antialiased`}
+    >
       <div className="container mx-auto px-4 py-8">
         <Header />
 

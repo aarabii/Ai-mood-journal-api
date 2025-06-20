@@ -1,6 +1,7 @@
 import { JournalEntry } from "@/constant/types";
 import { sentimentColors } from "@/constant/sentiments";
 import { Trash2, Edit } from "lucide-react";
+import { geistMono } from "@/app/font";
 
 interface JournalEntryCardProps {
   entry: JournalEntry;
@@ -49,7 +50,9 @@ export function JournalEntryCard({
           </button>
         </div>
       </div>
-      <p className="text-card-foreground mb-3">{entry.content}</p>
+      <p className={`${geistMono.variable} text-card-foreground mb-3`}>
+        {entry.content}
+      </p>
       <div className="flex justify-between items-center text-xs text-muted-foreground">
         <div className="flex flex-wrap gap-1">
           {entry.keywords.map((keyword, index) => (

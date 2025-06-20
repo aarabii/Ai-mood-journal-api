@@ -1,14 +1,6 @@
-type NerResult = {
-  entity_group: string;
-  score: number;
-  word: string;
-  start: number;
-  end: number;
-};
-
 export async function analyzeSentiment(
   text: string
-): Promise<"POSITIVE" | "NEGATIVE" | "NEUTRAL" | "Err"> {
+): Promise<"POSITIVE" | "NEGATIVE" | "NEUTRAL"> {
   try {
     const response = await fetch(
       "https://api-inference.huggingface.co/models/distilbert/distilbert-base-uncased-finetuned-sst-2-english",
@@ -29,7 +21,7 @@ export async function analyzeSentiment(
         "Hugging Face sentiment API returned an error:",
         result.error
       );
-      return "Err";
+      return "NEUTRAL";
     }
 
     if (Array.isArray(result) && Array.isArray(result[0]) && result[0][0]) {
@@ -42,7 +34,7 @@ export async function analyzeSentiment(
     return "NEUTRAL";
   } catch (error) {
     console.error("Exception caught in analyzeSentiment function:", error);
-    return "Err";
+    return "NEUTRAL";
   }
 }
 
@@ -51,7 +43,10 @@ export async function extractKeywords(text: string): Promise<string[]> {
     const response = await fetch(
       "https://api-inference.huggingface.co/models/dslim/bert-base-NER",
       {
-        headers: { Authorization: `Bearer ${process.env.HF_TOKEN}` },
+        headers: {
+          Authorization: `Bearer ${process.env.HF_TOKEN}`,
+          "Content-Type": "application/json",
+        },
         method: "POST",
         body: JSON.stringify({
           inputs: text,
@@ -60,15 +55,26 @@ export async function extractKeywords(text: string): Promise<string[]> {
       }
     );
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Hugging Face NER API error:", errorText);
-      throw new Error(`Keyword extraction API failed: ${response.statusText}`);
+    const result = await response.json();
+
+    if (!response.ok || result.error) {
+      console.error(
+        "Hugging Face keyword API returned an error. Status:",
+        response.status
+      );
+      console.error(
+        "Error details:",
+        result.error || "No specific error message provided."
+      );
+      return [];
     }
 
-    const results: NerResult[] = await response.json();
+    if (!Array.isArray(result)) {
+      console.error("Unexpected response format from keyword API:", result);
+      return [];
+    }
 
-    const keywords = results
+    const keywords = result
       .filter((entity) =>
         ["PER", "ORG", "LOC", "MISC"].includes(entity.entity_group)
       )
@@ -76,7 +82,7 @@ export async function extractKeywords(text: string): Promise<string[]> {
 
     return [...new Set(keywords)];
   } catch (error) {
-    console.error("Error in extractKeywords:", error);
+    console.error("Exception caught in extractKeywords function:", error);
     return [];
   }
 }
