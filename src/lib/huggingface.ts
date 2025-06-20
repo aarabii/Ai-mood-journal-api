@@ -1,41 +1,48 @@
-type SentimentResult = {
-  label: "POSITIVE" | "NEGATIVE";
-  score: number;
-};
-
 type NerResult = {
   entity_group: string;
   score: number;
   word: string;
+  start: number;
+  end: number;
 };
 
 export async function analyzeSentiment(
   text: string
-): Promise<"POSITIVE" | "NEGATIVE" | "NEUTRAL"> {
+): Promise<"POSITIVE" | "NEGATIVE" | "NEUTRAL" | "Err"> {
   try {
     const response = await fetch(
       "https://api-inference.huggingface.co/models/distilbert/distilbert-base-uncased-finetuned-sst-2-english",
       {
-        headers: { Authorization: `Bearer ${process.env.HF_TOKEN}` },
+        headers: {
+          Authorization: `Bearer ${process.env.HF_TOKEN}`,
+          "Content-Type": "application/json",
+        },
         method: "POST",
         body: JSON.stringify({ inputs: text }),
       }
     );
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Hugging Face sentiment API error:", errorText);
-      throw new Error(`Sentiment analysis API failed: ${response.statusText}`);
+    const result = await response.json();
+
+    if (!response.ok || result.error) {
+      console.error(
+        "Hugging Face sentiment API returned an error:",
+        result.error
+      );
+      return "Err";
     }
 
-    const result: SentimentResult[][] = await response.json();
-    const sentiment = result[0][0];
+    if (Array.isArray(result) && Array.isArray(result[0]) && result[0][0]) {
+      const sentiment = result[0][0];
+      if (sentiment.score > 0.9) {
+        return sentiment.label;
+      }
+    }
 
-    if (sentiment.score < 0.6) return "NEUTRAL";
-    return sentiment.label;
-  } catch (error) {
-    console.error("Error in analyzeSentiment:", error);
     return "NEUTRAL";
+  } catch (error) {
+    console.error("Exception caught in analyzeSentiment function:", error);
+    return "Err";
   }
 }
 
@@ -46,7 +53,10 @@ export async function extractKeywords(text: string): Promise<string[]> {
       {
         headers: { Authorization: `Bearer ${process.env.HF_TOKEN}` },
         method: "POST",
-        body: JSON.stringify({ inputs: text }),
+        body: JSON.stringify({
+          inputs: text,
+          options: { group_entities: true },
+        }),
       }
     );
 
@@ -62,8 +72,7 @@ export async function extractKeywords(text: string): Promise<string[]> {
       .filter((entity) =>
         ["PER", "ORG", "LOC", "MISC"].includes(entity.entity_group)
       )
-      .map((entity) => entity.word.replace(/##/g, ""))
-      .filter((word) => word.length > 2);
+      .map((entity) => entity.word.trim());
 
     return [...new Set(keywords)];
   } catch (error) {

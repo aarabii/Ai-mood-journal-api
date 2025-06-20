@@ -3,7 +3,7 @@ export interface JournalEntry {
   content: string;
   sentiment: "POSITIVE" | "NEGATIVE" | "NEUTRAL";
   keywords: string[];
-  createdAt: string;
+  created_at: string;
 }
 
 export interface TrendingKeyword {

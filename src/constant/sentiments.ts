@@ -1,7 +1,7 @@
 export const sentimentColors = {
-  POSITIVE: "hsl(var(--chart-2))",
-  NEGATIVE: "hsl(var(--destructive))",
-  NEUTRAL: "hsl(var(--chart-3))",
+  POSITIVE: "#34D399",
+  NEGATIVE: "#F87171",
+  NEUTRAL: "#60A5FA",
 };
 
 export const sentimentEmojis = {
