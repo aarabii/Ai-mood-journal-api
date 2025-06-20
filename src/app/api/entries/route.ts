@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { db, sql } from "@vercel/postgres";
-// Note: analyzeContent is imported in the POST function below
+import { sql } from "@vercel/postgres";
+import { analyzeContent } from "@/lib/huggingface";
 
-// Helper to ensure the database table exists
+// Ensure the database table exists
 async function setupDatabase() {
   try {
     await sql`
@@ -22,7 +22,7 @@ async function setupDatabase() {
   }
 }
 
-// Run setup
+// Run setup once on file load
 setupDatabase();
 
 export async function GET(request: Request) {
@@ -32,13 +32,20 @@ export async function GET(request: Request) {
     const limit = Math.min(parseInt(searchParams.get("limit") || "20", 10), 50);
     const offset = Math.max(parseInt(searchParams.get("offset") || "0", 10), 0);
 
-    const query = search
-      ? sql`SELECT *, "createdAt" as "createdAt" FROM entries WHERE content ILIKE ${
-          "%" + search + "%"
-        } ORDER BY "createdAt" DESC LIMIT ${limit} OFFSET ${offset}`
-      : sql`SELECT *, "createdAt" as "createdAt" FROM entries ORDER BY "createdAt" DESC LIMIT ${limit} OFFSET ${offset}`;
-
-    const { rows } = await db.query(query);
+    const { rows } = search
+      ? await sql`
+          SELECT *, "createdAt" as "createdAt"
+          FROM entries
+          WHERE content ILIKE ${"%" + search + "%"}
+          ORDER BY "createdAt" DESC
+          LIMIT ${limit} OFFSET ${offset}
+        `
+      : await sql`
+          SELECT *, "createdAt" as "createdAt"
+          FROM entries
+          ORDER BY "createdAt" DESC
+          LIMIT ${limit} OFFSET ${offset}
+        `;
 
     return NextResponse.json(rows);
   } catch (error) {
@@ -61,13 +68,21 @@ export async function POST(request: Request) {
       );
     }
 
-    const analysis = await analyzeContent(content.trim());
+    const trimmedContent = content.trim();
+    const analysis = await analyzeContent(trimmedContent);
+
+    const keywords = Array.isArray(analysis.keywords)
+      ? analysis.keywords.map((kw) => String(kw))
+      : [];
 
     const { rows } = await sql`
       INSERT INTO entries (content, sentiment, sentiment_score, keywords)
-      VALUES (${content.trim()}, ${analysis.sentiment}, ${
-      analysis.sentimentScore
-    }, ${analysis.keywords})
+      VALUES (
+        ${trimmedContent},
+        ${analysis.sentiment},
+        ${analysis.sentimentScore},
+        $${`{${keywords.map((kw) => `"${kw}"`).join(",")}}`}
+      )
       RETURNING *, "createdAt" as "createdAt";
     `;
 

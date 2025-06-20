@@ -1,5 +1,5 @@
 import { NextResponse as NextResponseNext } from "next/server";
-import { db as dbNext, sql as sqlNext } from "@vercel/postgres";
+import { sql as sqlNext } from "@vercel/postgres";
 import { analyzeContent as analyzeContentNext } from "@/lib/huggingface";
 
 type Params = { params: { id: string } };
@@ -37,15 +37,22 @@ export async function PUT(request: Request, { params }: Params) {
       );
     }
 
-    const analysis = await analyzeContentNext(content.trim());
+    const trimmedContent = content.trim();
+    const analysis = await analyzeContentNext(trimmedContent);
+
+    const keywords = Array.isArray(analysis.keywords)
+      ? analysis.keywords.map((kw) => String(kw))
+      : [];
+
+    const formattedKeywords = `{${keywords.map((kw) => `"${kw}"`).join(",")}}`;
 
     const { rows } = await sqlNext`
       UPDATE entries
-      SET content = ${content.trim()}, sentiment = ${
-      analysis.sentiment
-    }, sentiment_score = ${analysis.sentimentScore}, keywords = ${
-      analysis.keywords
-    }
+      SET
+        content = ${trimmedContent},
+        sentiment = ${analysis.sentiment},
+        sentiment_score = ${analysis.sentimentScore},
+        keywords = ${formattedKeywords}
       WHERE id = ${id}
       RETURNING *, "createdAt" as "createdAt";
     `;

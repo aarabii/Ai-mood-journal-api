@@ -1,9 +1,9 @@
 import { NextResponse as NextResponseStats } from "next/server";
-import { sql as sqlStats } from "@vercel/postgres";
+import { db } from "@vercel/postgres";
 
 export async function GET() {
   try {
-    const sentimentQuery = sqlStats`
+    const sentimentQuery = `
       SELECT
         sentiment,
         COUNT(id) as count
@@ -12,8 +12,8 @@ export async function GET() {
       GROUP BY sentiment;
     `;
 
-    const totalQuery = sqlStats`SELECT COUNT(*) as total FROM entries;`;
-    const avgScoreQuery = sqlStats`SELECT AVG(sentiment_score) as average_score FROM entries WHERE sentiment_score IS NOT NULL;`;
+    const totalQuery = `SELECT COUNT(*) as total FROM entries;`;
+    const avgScoreQuery = `SELECT AVG(sentiment_score) as average_score FROM entries WHERE sentiment_score IS NOT NULL;`;
 
     const [sentimentResult, totalResult, avgScoreResult] = await Promise.all([
       db.query(sentimentQuery),

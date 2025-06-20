@@ -4,8 +4,8 @@ import { sql as sqlDate } from "@vercel/postgres";
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const startDate = searchParams.get("startDate"); // Expected format: 'YYYY-MM-DD'
-    const endDate = searchParams.get("endDate"); // Expected format: 'YYYY-MM-DD'
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
 
     if (!startDate || !endDate) {
       return NextResponseDate.json(
@@ -14,7 +14,6 @@ export async function GET(request: Request) {
       );
     }
 
-    // Add time to endDate to include the whole day
     const endDateTime = `${endDate} 23:59:59`;
 
     const { rows } = await sqlDate`
